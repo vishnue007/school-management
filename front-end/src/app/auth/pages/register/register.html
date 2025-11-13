@@ -1,10 +1,21 @@
 <div class="min-h-screen bg-gray-100 flex items-center justify-center p-6">
   <div class="bg-white rounded-2xl shadow-lg w-full max-w-3xl p-8">
-    <h2 class="text-3xl font-semibold text-center text-blue-600 mb-6">
+    <h2 class="text-3xl font-semibold text-center text-blue-600 mb-4">
       Create Your Account
     </h2>
 
-    <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <p *ngIf="serverError" class="text-red-600 text-center mb-4">
+      {{ serverError }}
+    </p>
+    <p *ngIf="serverSuccess" class="text-green-600 text-center mb-4">
+      {{ serverSuccess }}
+    </p>
+
+    <form
+      [formGroup]="registerForm"
+      (ngSubmit)="onSubmit()"
+      class="grid grid-cols-1 md:grid-cols-2 gap-4"
+    >
       <!-- Full Name -->
       <div>
         <label for="fullName" class="block text-gray-600 mb-1">Full Name</label>
@@ -73,9 +84,12 @@
 
       <!-- Submit Button -->
       <div class="md:col-span-2 text-center mt-4">
-        <button type="submit" [disabled]="registerForm.invalid"
-          class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-all duration-200">
-          Register
+        <button
+          type="submit"
+          [disabled]="registerForm.invalid || isSubmitting"
+          class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-all duration-200 disabled:opacity-60"
+        >
+          {{ isSubmitting ? 'Registering...' : 'Register' }}
         </button>
       </div>
     </form>

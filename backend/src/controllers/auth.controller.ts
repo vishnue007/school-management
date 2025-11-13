@@ -1,6 +1,8 @@
-import type { Request, Response } from "express";
-import { randomUUID } from "node:crypto";
+import type { NextFunction, Request, Response } from "express";
+import bcrypt from "bcryptjs";
 import { z } from "zod";
+
+import { UserModel } from "../models/user.model.js";
 
 const registerSchema = z
   .object({
@@ -9,9 +11,9 @@ const registerSchema = z
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string().min(8, "Confirm password is required"),
     role: z.string().min(1, "Role is required"),
-    phone: z.string().min(6, "Phone is required"),
+    phone: z.string().min(6, "Phone is required").optional(),
     schoolId: z.string().min(1, "School ID is required"),
-    profilePicture: z.string().url("Profile picture must be a valid URL").optional(),
+    profilePicture: z.string().min(1).optional(),
     address: z.string().min(1, "Address is required"),
     classSection: z.string().min(1, "Class/Section is required").optional()
   })
@@ -22,14 +24,11 @@ const registerSchema = z
 
 type RegisterInput = z.infer<typeof registerSchema>;
 
-type RegisteredUser = Omit<RegisterInput, "confirmPassword"> & {
-  id: string;
-  createdAt: string;
-};
-
-const users: RegisteredUser[] = [];
-
-export const registerUser = (req: Request, res: Response) => {
+export const registerUser = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const parsedBody = registerSchema.safeParse(req.body);
 
   if (!parsedBody.success) {
@@ -39,31 +38,46 @@ export const registerUser = (req: Request, res: Response) => {
     });
   }
 
-  const data = parsedBody.data;
+  try {
+    const { confirmPassword, password, ...rest } = parsedBody.data;
 
-  const existingUser = users.find((user) => user.email === data.email);
+    const existingUser = await UserModel.findOne({
+      email: rest.email
+    }).lean();
 
-  if (existingUser) {
-    return res.status(409).json({
-      message: "Email already registered"
+    if (existingUser) {
+      return res.status(409).json({
+        message: "Email already registered"
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newUser = await UserModel.create({
+      ...rest,
+      password: hashedPassword
     });
+
+    const userObject = newUser.toObject();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password: _password, ...safeUser } = userObject;
+
+    return res.status(201).json({
+      message: "Registration successful",
+      user: safeUser
+    });
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      "code" in error &&
+      (error as { code: number }).code === 11000
+    ) {
+      return res.status(409).json({
+        message: "Email already registered"
+      });
+    }
+
+    return next(error);
   }
-
-  const newUser: RegisteredUser = {
-    id: randomUUID(),
-    createdAt: new Date().toISOString(),
-    ...data,
-    password: data.password
-  };
-
-  // In a production app you would hash the password and persist to a database.
-  users.push(newUser);
-
-  const { password, ...safeUser } = newUser;
-
-  return res.status(201).json({
-    message: "Registration successful",
-    user: safeUser
-  });
 };
 

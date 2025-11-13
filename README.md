@@ -37,6 +37,8 @@ Create a `.env` file (refer to `src/config/env.ts` for defaults):
 ```
 PORT=3000
 NODE_ENV=development
+MONGODB_URI=mongodb://127.0.0.1:27017
+MONGODB_DB=school-management
 ```
 
 ### Frontend

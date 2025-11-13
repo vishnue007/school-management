@@ -4,7 +4,12 @@ import { z } from "zod";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  PORT: z.coerce.number().int().positive().default(3000)
+  PORT: z.coerce.number().int().positive().default(3000),
+  MONGODB_URI: z
+    .string()
+    .min(1)
+    .default("mongodb://127.0.0.1:27017"),
+  MONGODB_DB: z.string().min(1).default("school-management")
 });
 
 const parsed = envSchema.safeParse(process.env);
